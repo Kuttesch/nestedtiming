@@ -8,16 +8,10 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from functools import wraps
 from types import TracebackType
-from typing import Any, Literal, ParamSpec, TypeVar, overload, cast
+from typing import Any, Literal, ParamSpec, TypeVar, cast, overload
 
 P = ParamSpec("P")
 R = TypeVar("R")
-
-
-# ---------------------------------------------------------------------
-# Sentinel
-# ---------------------------------------------------------------------
-
 
 class _TimedFlag:
     __slots__ = ()
@@ -28,16 +22,10 @@ class _TimedFlag:
 
 timed: _TimedFlag = _TimedFlag()
 
-
-# ---------------------------------------------------------------------
-# Public timing node
-# ---------------------------------------------------------------------
-
-
 @dataclass(slots=True)
 class TimingNode:
     total: float = 0.0
-    children: dict[str, "TimingNode"] = field(default_factory=dict)
+    children: dict[str, TimingNode] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -50,12 +38,6 @@ _current_state: ContextVar[_TimingState | None] = ContextVar(
     "_nestedtiming_state",
     default=None,
 )
-
-
-# ---------------------------------------------------------------------
-# Region context manager
-# ---------------------------------------------------------------------
-
 
 class Timer(
     AbstractContextManager[None],
@@ -93,11 +75,7 @@ class Timer(
     ) -> Literal[False]:
         state = _current_state.get()
 
-        if (
-            state is not None
-            and self._node is not None
-            and self._start is not None
-        ):
+        if state is not None and self._node is not None and self._start is not None:
             elapsed = time.perf_counter() - self._start
             self._node.total += elapsed
 
@@ -121,33 +99,21 @@ class Timer(
 def timer(name: str | None) -> Timer:
     return Timer(name)
 
-
-# ---------------------------------------------------------------------
-# Overloads
-# ---------------------------------------------------------------------
-
-
 @overload
-def timing(
+def timing[**P, R](
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]: ...
 
 
 @overload
-def timing(
+def timing[**P, R](
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
     Awaitable[R | tuple[R, float, dict[str, TimingNode] | None]],
 ]: ...
 
-
-# ---------------------------------------------------------------------
-# Implementation
-# ---------------------------------------------------------------------
-
-
-def timing(
+def timing[**P](
     func: Callable[P, Any],
 ) -> Callable[P, Any]:
     if inspect.iscoroutinefunction(func):
@@ -155,7 +121,7 @@ def timing(
     return _timing_sync(cast(Callable[P, R], func))
 
 
-def _timing_sync(
+def _timing_sync[**P, R](
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]:
     @wraps(func)
@@ -185,7 +151,7 @@ def _timing_sync(
     return wrapper
 
 
-def _timing_async(
+def _timing_async[**P, R](
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
