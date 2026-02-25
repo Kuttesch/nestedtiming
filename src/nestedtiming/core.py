@@ -1,4 +1,5 @@
-"""Provide call-time opt-in hierarchical execution timing.
+"""
+Provide call-time opt-in hierarchical execution timing.
 
 This module exposes:
 
@@ -56,7 +57,7 @@ class TimingNode:
     """
 
     total: float = 0.0
-    children: dict[str, TimingNode] = field(default_factory=dict)
+    children: dict[str, "TimingNode"] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -84,10 +85,7 @@ class Timer(
     AbstractContextManager[None],
     AbstractAsyncContextManager[None],
 ):
-    """Measure a named timing region within a timed function call.
-
-    Use this via the ``timer()`` helper function.
-    """
+    """Measure a named timing region within a timed function call."""
 
     __slots__ = ("_name", "_start", "_node")
 
@@ -147,6 +145,7 @@ class Timer(
             elapsed = time.perf_counter() - self._start
             self._node.total += elapsed
 
+            # Defensive stack pop.
             if state.stack and state.stack[-1] is self._node:
                 state.stack.pop()
 
@@ -181,13 +180,13 @@ def timer(name: str | None) -> Timer:
 
 
 @overload
-def timing[**P, R](
+def timing(
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]: ...
 
 
 @overload
-def timing[**P, R](
+def timing(
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
@@ -195,9 +194,7 @@ def timing[**P, R](
 ]: ...
 
 
-def timing[**P](
-    func: Callable[P, Any],
-) -> Callable[P, Any]:
+def timing(func: Callable[..., Any]) -> Any:
     """Decorate a function to enable optional hierarchical timing.
 
     Timing activates only when the sentinel ``timed`` is passed as the
@@ -210,19 +207,19 @@ def timing[**P](
     Otherwise, it behaves identically to the original function.
 
     Args:
-        func (Callable[P, Any]):
+        func (Callable[..., Any]):
             The function to wrap.
 
     Returns:
-        Callable[P, Any]:
-            A wrapped function preserving the original signature.
+        Any:
+            A wrapped callable. Precise types are provided by overloads.
     """
     if inspect.iscoroutinefunction(func):
-        return _timing_async(cast(Callable[P, Awaitable[R]], func))
-    return _timing_sync(cast(Callable[P, R], func))
+        return _timing_async(func)
+    return _timing_sync(func)
 
 
-def _timing_sync[**P, R](
+def _timing_sync(
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]:
     """Wrap a synchronous function with optional timing support.
@@ -242,7 +239,6 @@ def _timing_sync[**P, R](
         **kwargs: P.kwargs,
     ) -> R | tuple[R, float, dict[str, TimingNode] | None]:
         do_timing = bool(args and args[-1] is timed)
-
         if not do_timing:
             return func(*args, **kwargs)
 
@@ -263,7 +259,7 @@ def _timing_sync[**P, R](
     return wrapper
 
 
-def _timing_async[**P, R](
+def _timing_async(
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
@@ -286,7 +282,6 @@ def _timing_async[**P, R](
         **kwargs: P.kwargs,
     ) -> R | tuple[R, float, dict[str, TimingNode] | None]:
         do_timing = bool(args and args[-1] is timed)
-
         if not do_timing:
             return await func(*args, **kwargs)
 
