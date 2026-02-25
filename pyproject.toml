@@ -7,7 +7,7 @@ name = "nestedtiming"
 version = "0.0.1.alpha"
 description = "Call-time opt in hierarchical timing with scoped regions."
 readme = "readme"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{name = "Moritz Kuttesch"}]
 keywords = [
@@ -33,6 +33,16 @@ Homepage = "https://github.com/kuttesch/nestedtiming"
 Repository = "https://github.com/kuttesch/nestedtiming"
 Issues = "https://github.com/kuttesch/nestedtiming/issues"
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "coverage-badge",
+    "mypy",
+    "ruff",
+]
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 
@@ -43,9 +53,52 @@ where = ["src"]
 nestedtiming = ["py.typed"]
 
 [tool.ruff]
-target-version = "py312"
 line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "D", "ANN"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
+mypy_path = ["src"]
+ignore_missing_imports = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["test"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["src"]                # <- enables testing without editable install
+addopts = "-ra -q --strict-markers --import-mode=importlib"
+
+[tool.coverage.run]
+branch = true
+source = ["nestedtiming"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
