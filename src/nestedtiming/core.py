@@ -8,7 +8,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from functools import wraps
 from types import TracebackType
-from typing import Literal, ParamSpec, TypeVar, cast, overload
+from typing import Any, Literal, ParamSpec, TypeVar, overload, cast
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -81,7 +81,6 @@ class Timer(
             parent_dict[self._name] = node
 
         state.stack.append(node)
-
         self._node = node
         self._start = time.perf_counter()
         return None
@@ -102,7 +101,6 @@ class Timer(
             elapsed = time.perf_counter() - self._start
             self._node.total += elapsed
 
-            # Defensive stack pop
             if state.stack and state.stack[-1] is self._node:
                 state.stack.pop()
 
@@ -130,13 +128,13 @@ def timer(name: str | None) -> Timer:
 
 
 @overload
-def timing[**P, R](
+def timing(
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]: ...
 
 
 @overload
-def timing[**P, R](
+def timing(
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
@@ -150,15 +148,14 @@ def timing[**P, R](
 
 
 def timing(
-    func: Callable[P, R] | Callable[P, Awaitable[R]],
-):
+    func: Callable[P, Any],
+) -> Callable[P, Any]:
     if inspect.iscoroutinefunction(func):
         return _timing_async(cast(Callable[P, Awaitable[R]], func))
-
     return _timing_sync(cast(Callable[P, R], func))
 
 
-def _timing_sync[**P, R](
+def _timing_sync(
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]:
     @wraps(func)
@@ -171,14 +168,13 @@ def _timing_sync[**P, R](
         if not do_timing:
             return func(*args, **kwargs)
 
-        call_args = cast(P.args, args[:-1])
-
         state = _TimingState()
         token = _current_state.set(state)
 
         start = time.perf_counter()
         try:
-            result = func(*call_args, **kwargs)
+            inner = cast(Callable[..., R], func)
+            result = inner(*args[:-1], **kwargs)
         finally:
             total = time.perf_counter() - start
             _current_state.reset(token)
@@ -189,7 +185,7 @@ def _timing_sync[**P, R](
     return wrapper
 
 
-def _timing_async[**P, R](
+def _timing_async(
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
@@ -205,14 +201,13 @@ def _timing_async[**P, R](
         if not do_timing:
             return await func(*args, **kwargs)
 
-        call_args = cast(P.args, args[:-1])
-
         state = _TimingState()
         token = _current_state.set(state)
 
         start = time.perf_counter()
         try:
-            result = await func(*call_args, **kwargs)
+            inner = cast(Callable[..., Awaitable[R]], func)
+            result = await inner(*args[:-1], **kwargs)
         finally:
             total = time.perf_counter() - start
             _current_state.reset(token)
