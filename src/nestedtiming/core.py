@@ -1,5 +1,4 @@
-"""
-Provide call-time opt-in hierarchical execution timing.
+"""Provide call-time opt-in hierarchical execution timing.
 
 This module exposes:
 
@@ -57,7 +56,7 @@ class TimingNode:
     """
 
     total: float = 0.0
-    children: dict[str, "TimingNode"] = field(default_factory=dict)
+    children: dict[str, TimingNode] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -180,13 +179,13 @@ def timer(name: str | None) -> Timer:
 
 
 @overload
-def timing(
+def timing[**P, R](
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]: ...
 
 
 @overload
-def timing(
+def timing[**P, R](
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
@@ -219,7 +218,7 @@ def timing(func: Callable[..., Any]) -> Any:
     return _timing_sync(func)
 
 
-def _timing_sync(
+def _timing_sync[**P, R](
     func: Callable[P, R],
 ) -> Callable[P, R | tuple[R, float, dict[str, TimingNode] | None]]:
     """Wrap a synchronous function with optional timing support.
@@ -259,7 +258,7 @@ def _timing_sync(
     return wrapper
 
 
-def _timing_async(
+def _timing_async[**P, R](
     func: Callable[P, Awaitable[R]],
 ) -> Callable[
     P,
