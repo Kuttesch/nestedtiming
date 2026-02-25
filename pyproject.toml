@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nestedtiming"
+version = "0.0.1.alpha"
+description = "Call-time opt in hierarchical timing with scoped regions."
+readme = "readme"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{name = "Moritz Kuttesch"}]
+keywords = [
+    "timing",
+    "profiling",
+    "performance",
+    "hierarchical",
+    "scoped",
+    "async",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+    "Operating System :: OS Independent",
+]
+[project.urls]
+Homepage = "https://github.com/kuttesch/nestedtiming"
+Repository = "https://github.com/kuttesch/nestedtiming"
+Issues = "https://github.com/kuttesch/nestedtiming/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nestedtiming = ["py.typed"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
