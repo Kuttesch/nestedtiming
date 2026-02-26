@@ -39,6 +39,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "coverage-badge",
+    "setuptools",
     "mypy",
     "ruff",
 ]
